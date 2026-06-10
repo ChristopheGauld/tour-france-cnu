@@ -213,9 +213,9 @@ st.markdown(
     .selected-box {
         background: linear-gradient(
             135deg,
-            #1e3a8a,
-            #2563eb,
-            #60a5fa
+            #7f1d1d,
+            #b91c1c,
+            #dc2626
         );
         color: white;
         padding: 22px;
@@ -304,19 +304,6 @@ nb_photos = sum(
     for _, row in df.iterrows()
 )
 
-top_univ = (
-    df["Université"]
-    .value_counts()
-    .head(10)
-)
-
-
-st.sidebar.markdown("---")
-st.sidebar.subheader("Universités les plus représentées")
-
-for univ, n in top_univ.items():
-    st.sidebar.write(f"{univ} : {n}")
-
 
 st.markdown(
     f"""
@@ -332,22 +319,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-
-st.subheader("Répartition des nominations")
-
-hist = (
-    df["Nomination_année"]
-    .dropna()
-    .astype(int)
-    .value_counts()
-    .sort_index()
-)
-
-if not hist.empty:
-    st.bar_chart(hist)
-else:
-    st.info("Aucune année de nomination disponible.")
 
 
 m = folium.Map(
@@ -489,3 +460,26 @@ for _, row in praticiens.iterrows():
         st.write(f"Université : {row['Université']}")
 
     st.divider()
+
+
+st.markdown("---")
+st.subheader("Répartition des nominations par corps")
+
+chart_data = (
+    df.dropna(subset=["Nomination_année"])
+    .assign(Nomination_année=lambda x: x["Nomination_année"].astype(int))
+    .groupby(["Nomination_année", "Corps"])
+    .size()
+    .reset_index(name="Nombre")
+)
+
+if chart_data.empty:
+    st.info("Aucune année de nomination disponible.")
+else:
+    pivot = chart_data.pivot(
+        index="Nomination_année",
+        columns="Corps",
+        values="Nombre",
+    ).fillna(0)
+
+    st.bar_chart(pivot)
