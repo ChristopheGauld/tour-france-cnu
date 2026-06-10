@@ -380,38 +380,33 @@ if clicked_univ and clicked_univ in sorted(df["Université"].dropna().unique()):
 else:
     universite_selectionnee = "Toutes les universités"
 
-
 if universite_selectionnee == "Toutes les universités":
     praticiens = df.sort_values(["Université", "Nom", "Prénom"])
     st.header("Tous les praticiens")
+
 else:
     praticiens = df[df["Université"] == universite_selectionnee].sort_values(["Nom", "Prénom"])
-
-    repartition = praticiens["Corps"].value_counts()
-
-    texte_repartition = "<br>".join(
-        [f"{corps} : {n}" for corps, n in repartition.items()]
-    )
-
-    texte_praticiens = "<br>".join(
-        [practitioner_line(row, with_year=True) for _, row in praticiens.iterrows()]
-    )
 
     st.markdown(
         f"""
         <div class="selected-box">
             <h3 style="margin-top:0;">{universite_selectionnee}</h3>
             <p><b>{len(praticiens)}</b> praticien(s)</p>
-
-            <p><b>Répartition par corps</b><br>
-            {texte_repartition}</p>
-
-            <p><b>Liste des praticiens</b><br>
-            {texte_praticiens}</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
+    st.subheader("Répartition par corps")
+
+    for corps, n in praticiens["Corps"].value_counts().items():
+        st.write(f"• {corps} : {n}")
+
+    st.subheader("Liste des praticiens")
+
+    for _, row in praticiens.iterrows():
+        st.write(practitioner_line(row, with_year=True))
+
 
 
 for _, row in praticiens.iterrows():
