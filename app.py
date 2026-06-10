@@ -411,26 +411,29 @@ else:
 
     liste_html = "".join(f"<li>{line}</li>" for line in lines)
 
-    st.markdown(
-        f"""
-        <div class="selected-box">
-            <h3 style="margin-top:0;">{universite_selectionnee}</h3>
-            <p><b>{len(praticiens)}</b> praticien(s)</p>
+    texte_repartition = "<br>".join(
+    [f"{corps} : {n}" for corps, n in repartition.items()]
+)
 
-            <h4>Répartition par corps</h4>
-            <ul>
-                {corps_html}
-            </ul>
+texte_praticiens = "<br>".join(
+    [practitioner_line(row, with_year=True) for _, row in praticiens.iterrows()]
+)
 
-            <h4>Liste des praticiens</h4>
-            <ul>
-                {liste_html}
-            </ul>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+st.markdown(
+    f"""
+    <div class="selected-box">
+        <h3 style="margin-top:0;">{universite_selectionnee}</h3>
+        <p><b>{len(praticiens)}</b> praticien(s)</p>
 
+        <p><b>Répartition par corps</b><br>
+        {texte_repartition}</p>
+
+        <p><b>Liste des praticiens</b><br>
+        {texte_praticiens}</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 for _, row in praticiens.iterrows():
     prenom = str(row["Prénom"]).strip()
