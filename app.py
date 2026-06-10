@@ -116,7 +116,6 @@ def load_data() -> pd.DataFrame:
     df["Nom"] = df["Nom"].astype(str).str.strip()
     df["Prénom"] = df["Prénom"].astype(str).str.strip()
     df["Corps"] = df["Corps"].astype(str).str.strip()
-
     df["Nomination_année"] = pd.to_numeric(df["Nomination"], errors="coerce").astype("Int64")
 
     return df
@@ -132,24 +131,28 @@ def count_corps(df: pd.DataFrame, pattern: str) -> int:
     )
 
 
-def practitioner_line(row: pd.Series) -> str:
+def practitioner_line(row: pd.Series, with_year: bool = True) -> str:
     prenom = str(row["Prénom"]).strip()
     nom = str(row["Nom"]).strip()
+    corps = str(row["Corps"]).strip()
     annee = row["Nomination_année"]
 
-    if pd.notna(annee):
-        return f"{prenom} {nom} ({int(annee)})"
+    if with_year and pd.notna(annee):
+        return f"{prenom} {nom}, {corps} ({int(annee)})"
 
-    return f"{prenom} {nom}"
+    return f"{prenom} {nom}, {corps}"
 
 
 def popup_html(univ: str, data: pd.DataFrame) -> str:
-    lines = [practitioner_line(row) for _, row in data.sort_values(["Nom", "Prénom"]).iterrows()]
+    lines = [
+        practitioner_line(row, with_year=True)
+        for _, row in data.sort_values(["Nom", "Prénom"]).iterrows()
+    ]
 
     items = "".join(f"<li>{line}</li>" for line in lines)
 
     return f"""
-    <div style="font-family: Arial; font-size: 14px; width: 330px;">
+    <div style="font-family: Arial; font-size: 14px; width: 350px;">
         <h4 style="margin-bottom: 4px;">{univ}</h4>
         <div style="margin-bottom: 8px;">
             <b>{len(data)}</b> praticien(s)
@@ -206,6 +209,14 @@ st.markdown(
         line-height: 1.8;
         box-shadow: 0 8px 24px rgba(0,0,0,0.18);
     }
+    .selected-box {
+        background: #fff7ed;
+        border-left: 6px solid #c24124;
+        padding: 18px 22px;
+        border-radius: 14px;
+        margin-top: 18px;
+        margin-bottom: 22px;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -255,7 +266,7 @@ if recherche:
         df["Nom"].str.contains(recherche, case=False, na=False)
         | df["Prénom"].str.contains(recherche, case=False, na=False)
         | df["Université"].str.contains(recherche, case=False, na=False)
-        | df["Grade"].str.contains(recherche, case=False, na=False)
+        | df["Corps"].str.contains(recherche, case=False, na=False)
     )
     df = df[mask]
 
@@ -305,7 +316,7 @@ for univ in sorted(df["Université"].dropna().unique()):
         fill_color="#c24124",
         fill_opacity=0.88,
         weight=2,
-        popup=folium.Popup(popup_html(univ, data_univ), max_width=420),
+        popup=folium.Popup(popup_html(univ, data_univ), max_width=440),
         tooltip=univ,
     ).add_to(m)
 
@@ -348,12 +359,8 @@ st.markdown("---")
 
 if clicked_univ and clicked_univ in sorted(df["Université"].dropna().unique()):
     universite_selectionnee = clicked_univ
-    st.success(f"Université sélectionnée depuis la carte : {universite_selectionnee}")
 else:
-    universite_selectionnee = st.selectbox(
-        "Afficher les praticiens de",
-        ["Toutes les universités"] + sorted(df["Université"].dropna().unique()),
-    )
+    universite_selectionnee = "Toutes les universités"
 
 
 if universite_selectionnee == "Toutes les universités":
@@ -361,14 +368,32 @@ if universite_selectionnee == "Toutes les universités":
     st.header("Toutes les universités")
 else:
     praticiens = df[df["Université"] == universite_selectionnee].sort_values(["Nom", "Prénom"])
-    st.header(universite_selectionnee)
+
+    lines = [
+        practitioner_line(row, with_year=True)
+        for _, row in praticiens.iterrows()
+    ]
+
+    liste_html = "".join(f"<li>{line}</li>" for line in lines)
+
+    st.markdown(
+        f"""
+        <div class="selected-box">
+            <h3 style="margin-top:0;">{universite_selectionnee}</h3>
+            <p><b>{len(praticiens)}</b> praticien(s)</p>
+            <ul>
+                {liste_html}
+            </ul>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 for _, row in praticiens.iterrows():
     prenom = str(row["Prénom"]).strip()
     nom = str(row["Nom"]).strip()
     corps = str(row["Corps"]).strip()
-    grade = str(row["Grade"]).strip()
     annee = row["Nomination_année"]
 
     photo = find_photo(prenom, nom)
@@ -384,7 +409,6 @@ for _, row in praticiens.iterrows():
     with c2:
         st.subheader(f"{prenom} {nom}")
         st.write(f"Corps : {corps}")
-        st.write(f"Grade : {grade}")
 
         if pd.notna(annee):
             st.write(f"Année de nomination : {int(annee)}")
