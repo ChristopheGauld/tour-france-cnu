@@ -1,18 +1,22 @@
 from pathlib import Path
+import re
+import unicodedata
 
 import folium
 import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
 
+
 st.set_page_config(
-    page_title="Tour de France CNU",
+    page_title="Tour de France des HU de PEA",
     page_icon="🗺️",
     layout="wide",
 )
 
 EXCEL_PATH = Path("Tour090626.xlsx")
-PHOTO_DIR = Path("photo")
+PHOTO_DIRS = [Path("photo"), Path("photos")]
+
 
 UNIVERSITES = {
     "Paris Cité": (48.8566, 2.3522),
@@ -61,6 +65,38 @@ def normalize_university(value: object) -> str:
     return str(value).replace("\n", " ").strip()
 
 
+def clean_name(value: object) -> str:
+    text = str(value).strip()
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9]", "", text)
+    return text
+
+
+def find_photo(prenom: str, nom: str) -> Path | None:
+    target_1 = clean_name(f"{prenom}_{nom}")
+    target_2 = clean_name(f"{prenom}{nom}")
+
+    for folder in PHOTO_DIRS:
+        if not folder.exists():
+            continue
+
+        for file in folder.iterdir():
+            if not file.is_file():
+                continue
+
+            if file.suffix.lower().replace(".", "") not in ["jpg", "jpeg", "png", "webp"]:
+                continue
+
+            stem = clean_name(file.stem)
+
+            if stem in [target_1, target_2]:
+                return file
+
+    return None
+
+
 @st.cache_data
 def load_data() -> pd.DataFrame:
     if not EXCEL_PATH.exists():
@@ -69,8 +105,9 @@ def load_data() -> pd.DataFrame:
 
     df = pd.read_excel(EXCEL_PATH)
 
-    required_columns = ["Université", "Nom", "Prénom", "Corps", "Ancienneté de grade"]
+    required_columns = ["Université", "Nom", "Prénom", "Corps", "Grade", "Nomination"]
     missing = [col for col in required_columns if col not in df.columns]
+
     if missing:
         st.error("Colonnes manquantes dans le fichier Excel : " + ", ".join(missing))
         st.stop()
@@ -79,40 +116,86 @@ def load_data() -> pd.DataFrame:
     df["Nom"] = df["Nom"].astype(str).str.strip()
     df["Prénom"] = df["Prénom"].astype(str).str.strip()
     df["Corps"] = df["Corps"].astype(str).str.strip()
+    df["Grade"] = df["Grade"].astype(str).str.strip()
 
-    df["Ancienneté"] = pd.to_datetime(
-        df["Ancienneté de grade"],
-        errors="coerce",
-    ).dt.year
+    df["Nomination_année"] = pd.to_numeric(df["Nomination"], errors="coerce").astype("Int64")
 
     return df
 
 
-def find_photo(prenom: str, nom: str) -> Path | None:
-    PHOTO_DIR.mkdir(exist_ok=True)
-    base = f"{prenom}_{nom}".replace(" ", "_").replace("/", "-")
-    for ext in ["jpg", "jpeg", "png", "webp"]:
-        path = PHOTO_DIR / f"{base}.{ext}"
-        if path.exists():
-            return path
-    return None
-
-
 def count_corps(df: pd.DataFrame, pattern: str) -> int:
-    return int(df["Corps"].astype(str).str.upper().str.contains(pattern, regex=True, na=False).sum())
+    return int(
+        df["Corps"]
+        .astype(str)
+        .str.upper()
+        .str.contains(pattern, regex=True, na=False)
+        .sum()
+    )
+
+
+def practitioner_line(row: pd.Series) -> str:
+    prenom = str(row["Prénom"]).strip()
+    nom = str(row["Nom"]).strip()
+    grade = str(row["Grade"]).strip()
+    annee = row["Nomination_année"]
+
+    if pd.notna(annee):
+        return f"{prenom} {nom}, {grade} ({int(annee)})"
+
+    return f"{prenom} {nom}, {grade}"
+
+
+def popup_html(univ: str, data: pd.DataFrame) -> str:
+    lines = [practitioner_line(row) for _, row in data.sort_values(["Nom", "Prénom"]).iterrows()]
+
+    items = "".join(f"<li>{line}</li>" for line in lines)
+
+    return f"""
+    <div style="font-family: Arial; font-size: 14px; width: 330px;">
+        <h4 style="margin-bottom: 4px;">{univ}</h4>
+        <div style="margin-bottom: 8px;">
+            <b>{len(data)}</b> praticien(s)
+        </div>
+        <ul style="padding-left: 18px; margin-top: 4px;">
+            {items}
+        </ul>
+    </div>
+    """
+
+
+def photo_placeholder():
+    st.markdown(
+        """
+        <div style="
+            width:150px;
+            height:150px;
+            border:2px solid #b23a22;
+            border-radius:14px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color:#b23a22;
+            font-size:16px;
+            background:rgba(178,58,34,0.06);
+        ">
+            Photo
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 st.markdown(
     """
     <style>
     .main-title {
-        font-size: 48px;
+        font-size: 46px;
         font-weight: 800;
         margin-bottom: 0px;
     }
     .subtitle {
         color: #6b7280;
-        font-size: 22px;
+        font-size: 21px;
         margin-bottom: 22px;
     }
     .stats-bar {
@@ -125,35 +208,30 @@ st.markdown(
         line-height: 1.8;
         box-shadow: 0 8px 24px rgba(0,0,0,0.18);
     }
-    .photo-placeholder {
-        width: 150px;
-        height: 150px;
-        border: 2px solid #b23a22;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #b23a22;
-        font-size: 16px;
-        background: rgba(178,58,34,0.06);
-    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-st.markdown('<div class="main-title">Tour de France CNU</div>', unsafe_allow_html=True)
+
 st.markdown(
-    '<div class="subtitle">Carte interactive des universités et des candidats</div>',
+    '<div class="main-title">Tour de France des HU de PEA</div>',
     unsafe_allow_html=True,
 )
+
+st.markdown(
+    '<div class="subtitle">Carte interactive des universités et des praticiens</div>',
+    unsafe_allow_html=True,
+)
+
 
 df_original = load_data()
 df = df_original.copy()
 
+
 st.sidebar.header("Filtres")
 
-recherche = st.sidebar.text_input("Rechercher un candidat")
+recherche = st.sidebar.text_input("Rechercher un praticien")
 
 corps_options = sorted(df["Corps"].dropna().unique())
 corps_selection = st.sidebar.multiselect(
@@ -163,7 +241,10 @@ corps_selection = st.sidebar.multiselect(
 )
 
 universites_options = ["Toutes les universités"] + sorted(df["Université"].dropna().unique())
-universite_filtre = st.sidebar.selectbox("Université", universites_options)
+universite_filtre = st.sidebar.selectbox(
+    "Université",
+    universites_options,
+)
 
 if corps_selection:
     df = df[df["Corps"].isin(corps_selection)]
@@ -176,20 +257,23 @@ if recherche:
         df["Nom"].str.contains(recherche, case=False, na=False)
         | df["Prénom"].str.contains(recherche, case=False, na=False)
         | df["Université"].str.contains(recherche, case=False, na=False)
+        | df["Grade"].str.contains(recherche, case=False, na=False)
     )
     df = df[mask]
 
-nb_total = len(df)
+
+total = len(df)
 nb_univ = df["Université"].nunique()
-nb_mcuph = count_corps(df, r"MCU\s*-?\s*PH")
-nb_puph = count_corps(df, r"PU\s*-?\s*PH")
+
+nb_mcuph = count_corps(df, r"MCU")
+nb_puph = count_corps(df, r"PU-PH|PUPH")
 nb_pat_pa = count_corps(df, r"\bPAT\b|\bPA\b")
-nb_phu = count_corps(df, r"\bPHU\b")
+nb_phu = count_corps(df, r"PHU")
 
 st.markdown(
     f"""
     <div class="stats-bar">
-        <b>{nb_total}</b> candidats ·
+        <b>{total}</b> praticiens ·
         <b>{nb_univ}</b> universités ·
         <b>{nb_mcuph}</b> MCU-PH ·
         <b>{nb_puph}</b> PU-PH ·
@@ -200,8 +284,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
 m = folium.Map(
-    location=[46.5, 2.2],
+    location=[46.6, 2.3],
     zoom_start=6,
     tiles="CartoDB positron",
 )
@@ -210,44 +295,83 @@ for univ in sorted(df["Université"].dropna().unique()):
     if univ not in UNIVERSITES:
         continue
 
+    data_univ = df[df["Université"] == univ]
     lat, lon = UNIVERSITES[univ]
-    n = len(df[df["Université"] == univ])
+    n = len(data_univ)
 
     folium.CircleMarker(
         location=[lat, lon],
-        radius=8 + min(n, 12),
-        popup=f"{univ} : {n} candidat(s)",
-        tooltip=f"{univ} ({n})",
-        color="#7f1d1d",
+        radius=16 + min(n, 14),
+        color="#8f1d14",
         fill=True,
         fill_color="#c24124",
         fill_opacity=0.88,
         weight=2,
+        popup=folium.Popup(popup_html(univ, data_univ), max_width=420),
+        tooltip=univ,
     ).add_to(m)
 
-st_folium(m, width=None, height=650)
+    folium.Marker(
+        location=[lat, lon],
+        icon=folium.DivIcon(
+            html=f"""
+            <div style="
+                font-size:14px;
+                font-weight:800;
+                color:white;
+                text-align:center;
+                transform: translate(-50%, -50%);
+                width:32px;
+                height:32px;
+                line-height:32px;
+            ">
+                {n}
+            </div>
+            """
+        ),
+        tooltip=univ,
+    ).add_to(m)
+
+
+map_data = st_folium(
+    m,
+    width=None,
+    height=650,
+    returned_objects=["last_object_clicked_tooltip"],
+)
+
+
+clicked_univ = None
+if map_data and map_data.get("last_object_clicked_tooltip"):
+    clicked_univ = map_data["last_object_clicked_tooltip"]
 
 st.markdown("---")
 
-universites_affichage = ["Toutes les universités"] + sorted(df["Université"].dropna().unique())
-universite_selectionnee = st.selectbox(
-    "Afficher les candidats de",
-    universites_affichage,
-)
+
+if clicked_univ and clicked_univ in sorted(df["Université"].dropna().unique()):
+    universite_selectionnee = clicked_univ
+    st.success(f"Université sélectionnée depuis la carte : {universite_selectionnee}")
+else:
+    universite_selectionnee = st.selectbox(
+        "Afficher les praticiens de",
+        ["Toutes les universités"] + sorted(df["Université"].dropna().unique()),
+    )
+
 
 if universite_selectionnee == "Toutes les universités":
-    candidats = df.sort_values(["Université", "Nom", "Prénom"])
+    praticiens = df.sort_values(["Université", "Nom", "Prénom"])
     st.header("Toutes les universités")
 else:
-    candidats = df[df["Université"] == universite_selectionnee].sort_values(["Nom", "Prénom"])
+    praticiens = df[df["Université"] == universite_selectionnee].sort_values(["Nom", "Prénom"])
     st.header(universite_selectionnee)
 
-for _, row in candidats.iterrows():
+
+for _, row in praticiens.iterrows():
     prenom = str(row["Prénom"]).strip()
     nom = str(row["Nom"]).strip()
     corps = str(row["Corps"]).strip()
-    anciennete = row["Ancienneté"]
-    universite = str(row["Université"]).strip()
+    grade = str(row["Grade"]).strip()
+    annee = row["Nomination_année"]
 
     photo = find_photo(prenom, nom)
 
@@ -257,16 +381,18 @@ for _, row in candidats.iterrows():
         if photo:
             st.image(str(photo), width=150)
         else:
-            st.markdown('<div class="photo-placeholder">Photo</div>', unsafe_allow_html=True)
+            photo_placeholder()
 
     with c2:
         st.subheader(f"{prenom} {nom}")
-        st.write(f"Université : {universite}")
         st.write(f"Corps : {corps}")
+        st.write(f"Grade : {grade}")
 
-        if pd.notna(anciennete):
-            st.write(f"Ancienneté de grade : {int(anciennete)}")
+        if pd.notna(annee):
+            st.write(f"Année de nomination : {int(annee)}")
         else:
-            st.write("Ancienneté de grade :")
+            st.write("Année de nomination :")
+
+        st.write(f"Université : {row['Université']}")
 
     st.divider()
