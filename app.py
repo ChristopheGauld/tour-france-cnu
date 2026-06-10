@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 EXCEL_PATH = Path("Tour090626.xlsx")
-PHOTO_DIR = Path("photos")
+PHOTO_DIR = Path("photo")
 
 UNIVERSITES = {
     "Paris Cité": (48.8566, 2.3522),
