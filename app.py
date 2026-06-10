@@ -6,7 +6,7 @@ import streamlit as st
 from streamlit_folium import st_folium
 
 st.set_page_config(
-    page_title="Tour de France CNU",
+    page_title="Tour de France des HU de PEA",
     page_icon="🗺️",
     layout="wide",
 )
@@ -231,7 +231,7 @@ st.markdown("---")
 
 universites_affichage = ["Toutes les universités"] + sorted(df["Université"].dropna().unique())
 universite_selectionnee = st.selectbox(
-    "Afficher les candidats de",
+    "Afficher les praticiens de",
     universites_affichage,
 )
 
