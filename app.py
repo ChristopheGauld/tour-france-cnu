@@ -152,12 +152,10 @@ def popup_html(univ: str, data: pd.DataFrame) -> str:
     items = "".join(f"<li>{line}</li>" for line in lines)
 
     return f"""
-    <div style="font-family: Arial; font-size: 14px; width: 350px;">
-        <h4 style="margin-bottom: 4px;">{univ}</h4>
-        <div style="margin-bottom: 8px;">
-            <b>{len(data)}</b> praticien(s)
-        </div>
-        <ul style="padding-left: 18px; margin-top: 4px;">
+    <div style="font-family: Arial; font-size: 14px; width: 360px;">
+        <h4 style="margin:0 0 8px 0;">{univ}</h4>
+        <p style="margin:0 0 8px 0;"><b>{len(data)}</b> praticien(s)</p>
+        <ul style="padding-left:18px; margin:0;">
             {items}
         </ul>
     </div>
@@ -194,11 +192,13 @@ st.markdown(
         font-weight: 800;
         margin-bottom: 0px;
     }
+
     .subtitle {
         color: #6b7280;
         font-size: 21px;
         margin-bottom: 22px;
     }
+
     .stats-bar {
         background: linear-gradient(90deg, #8f1d14, #c24124, #d97706);
         color: white;
@@ -209,21 +209,33 @@ st.markdown(
         line-height: 1.8;
         box-shadow: 0 8px 24px rgba(0,0,0,0.18);
     }
-    .selected-box {
-    background: linear-gradient(
-        135deg,
-        #7f1d1d,
-        #b91c1c,
-        #dc2626
-    );
-    color: white;
-    padding: 22px;
-    border-radius: 18px;
-    margin-top: 18px;
-    margin-bottom: 22px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-}
 
+    .selected-box {
+        background: linear-gradient(
+            135deg,
+            #1e3a8a,
+            #2563eb,
+            #60a5fa
+        );
+        color: white;
+        padding: 22px;
+        border-radius: 18px;
+        margin-top: 18px;
+        margin-bottom: 22px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
+
+    .selected-box h3,
+    .selected-box h4,
+    .selected-box p,
+    .selected-box ul,
+    .selected-box li {
+        color: white;
+    }
+
+    .selected-box li {
+        margin-bottom: 6px;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -274,6 +286,7 @@ if recherche:
         | df["Prénom"].str.contains(recherche, case=False, na=False)
         | df["Université"].str.contains(recherche, case=False, na=False)
         | df["Corps"].str.contains(recherche, case=False, na=False)
+        | df["Nomination_année"].astype(str).str.contains(recherche, case=False, na=False)
     )
     df = df[mask]
 
@@ -286,6 +299,25 @@ nb_puph = count_corps(df, r"PU-PH|PUPH")
 nb_pat_pa = count_corps(df, r"\bPAT\b|\bPA\b")
 nb_phu = count_corps(df, r"PHU")
 
+nb_photos = sum(
+    find_photo(row["Prénom"], row["Nom"]) is not None
+    for _, row in df.iterrows()
+)
+
+top_univ = (
+    df["Université"]
+    .value_counts()
+    .head(10)
+)
+
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Universités les plus représentées")
+
+for univ, n in top_univ.items():
+    st.sidebar.write(f"{univ} : {n}")
+
+
 st.markdown(
     f"""
     <div class="stats-bar">
@@ -294,11 +326,28 @@ st.markdown(
         <b>{nb_mcuph}</b> MCU-PH ·
         <b>{nb_puph}</b> PU-PH ·
         <b>{nb_pat_pa}</b> PAT/PA ·
-        <b>{nb_phu}</b> PHU
+        <b>{nb_phu}</b> PHU ·
+        <b>{nb_photos}</b> photos disponibles
     </div>
     """,
     unsafe_allow_html=True,
 )
+
+
+st.subheader("Répartition des nominations")
+
+hist = (
+    df["Nomination_année"]
+    .dropna()
+    .astype(int)
+    .value_counts()
+    .sort_index()
+)
+
+if not hist.empty:
+    st.bar_chart(hist)
+else:
+    st.info("Aucune année de nomination disponible.")
 
 
 m = folium.Map(
@@ -311,41 +360,41 @@ for univ in sorted(df["Université"].dropna().unique()):
     if univ not in UNIVERSITES:
         continue
 
-    data_univ = df[df["Université"] == univ]
+    data_univ = df[df["Université"] == univ].sort_values(["Nom", "Prénom"])
     lat, lon = UNIVERSITES[univ]
     n = len(data_univ)
 
-    folium.CircleMarker(
-        location=[lat, lon],
-        radius=16 + min(n, 14),
-        color="#8f1d14",
-        fill=True,
-        fill_color="#c24124",
-        fill_opacity=0.88,
-        weight=2,
-        popup=folium.Popup(popup_html(univ, data_univ), max_width=440),
-        tooltip=univ,
-    ).add_to(m)
+    if n <= 2:
+        fill_color = "#facc15"
+    elif n <= 5:
+        fill_color = "#f97316"
+    else:
+        fill_color = "#dc2626"
 
     folium.Marker(
         location=[lat, lon],
+        tooltip=f"{univ} ({n})",
+        popup=folium.Popup(popup_html(univ, data_univ), max_width=440),
         icon=folium.DivIcon(
             html=f"""
             <div style="
-                font-size:14px;
-                font-weight:800;
+                background:{fill_color};
                 color:white;
-                text-align:center;
-                transform: translate(-50%, -50%);
-                width:32px;
-                height:32px;
-                line-height:32px;
+                border:3px solid #7f1d1d;
+                border-radius:50%;
+                width:44px;
+                height:44px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                font-size:15px;
+                font-weight:800;
+                box-shadow:0 2px 8px rgba(0,0,0,0.35);
             ">
                 {n}
             </div>
             """
         ),
-        tooltip=univ,
     ).add_to(m)
 
 
@@ -359,7 +408,9 @@ map_data = st_folium(
 
 clicked_univ = None
 if map_data and map_data.get("last_object_clicked_tooltip"):
-    clicked_univ = map_data["last_object_clicked_tooltip"]
+    tooltip_value = map_data["last_object_clicked_tooltip"]
+    clicked_univ = tooltip_value.split(" (")[0]
+
 
 st.markdown("---")
 
@@ -372,9 +423,15 @@ else:
 
 if universite_selectionnee == "Toutes les universités":
     praticiens = df.sort_values(["Université", "Nom", "Prénom"])
-    st.header("Toutes les universités")
+    st.header("Tous les praticiens")
 else:
     praticiens = df[df["Université"] == universite_selectionnee].sort_values(["Nom", "Prénom"])
+
+    repartition = praticiens["Corps"].value_counts()
+
+    corps_html = ""
+    for corps, n in repartition.items():
+        corps_html += f"<li>{corps} : {n}</li>"
 
     lines = [
         practitioner_line(row, with_year=True)
@@ -388,6 +445,13 @@ else:
         <div class="selected-box">
             <h3 style="margin-top:0;">{universite_selectionnee}</h3>
             <p><b>{len(praticiens)}</b> praticien(s)</p>
+
+            <h4>Répartition par corps</h4>
+            <ul>
+                {corps_html}
+            </ul>
+
+            <h4>Liste des praticiens</h4>
             <ul>
                 {liste_html}
             </ul>
