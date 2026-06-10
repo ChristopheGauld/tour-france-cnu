@@ -210,13 +210,20 @@ st.markdown(
         box-shadow: 0 8px 24px rgba(0,0,0,0.18);
     }
     .selected-box {
-        background: #fff7ed;
-        border-left: 6px solid #c24124;
-        padding: 18px 22px;
-        border-radius: 14px;
-        margin-top: 18px;
-        margin-bottom: 22px;
-    }
+    background: linear-gradient(
+        135deg,
+        #7f1d1d,
+        #b91c1c,
+        #dc2626
+    );
+    color: white;
+    padding: 22px;
+    border-radius: 18px;
+    margin-top: 18px;
+    margin-bottom: 22px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+
     </style>
     """,
     unsafe_allow_html=True,
