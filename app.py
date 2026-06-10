@@ -88,13 +88,37 @@ def load_data() -> pd.DataFrame:
     return df
 
 
-def find_photo(prenom: str, nom: str) -> Path | None:
+import unicodedata
+
+def clean_name(txt):
+    txt = str(txt)
+
+    txt = unicodedata.normalize("NFKD", txt)
+    txt = "".join(c for c in txt if not unicodedata.combining(c))
+
+    txt = txt.replace("-", "")
+    txt = txt.replace(" ", "")
+    txt = txt.replace("'", "")
+
+    return txt.lower()
+
+def find_photo(prenom: str, nom: str):
+
     PHOTO_DIR.mkdir(exist_ok=True)
-    base = f"{prenom}_{nom}".replace(" ", "_").replace("/", "-")
-    for ext in ["jpg", "jpeg", "png", "webp"]:
-        path = PHOTO_DIR / f"{base}.{ext}"
-        if path.exists():
-            return path
+
+    prenom = clean_name(prenom)
+    nom = clean_name(nom)
+
+    for file in PHOTO_DIR.iterdir():
+
+        if not file.is_file():
+            continue
+
+        stem = clean_name(file.stem)
+
+        if stem == f"{prenom}_{nom}" or stem == f"{prenom}{nom}":
+            return file
+
     return None
 
 
