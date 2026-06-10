@@ -105,7 +105,7 @@ def load_data() -> pd.DataFrame:
 
     df = pd.read_excel(EXCEL_PATH)
 
-    required_columns = ["Université", "Nom", "Prénom", "Corps", "Grade", "Nomination"]
+    required_columns = ["Université", "Nom", "Prénom", "Corps", "Nomination"]
     missing = [col for col in required_columns if col not in df.columns]
 
     if missing:
@@ -116,7 +116,6 @@ def load_data() -> pd.DataFrame:
     df["Nom"] = df["Nom"].astype(str).str.strip()
     df["Prénom"] = df["Prénom"].astype(str).str.strip()
     df["Corps"] = df["Corps"].astype(str).str.strip()
-    df["Grade"] = df["Grade"].astype(str).str.strip()
 
     df["Nomination_année"] = pd.to_numeric(df["Nomination"], errors="coerce").astype("Int64")
 
@@ -136,13 +135,12 @@ def count_corps(df: pd.DataFrame, pattern: str) -> int:
 def practitioner_line(row: pd.Series) -> str:
     prenom = str(row["Prénom"]).strip()
     nom = str(row["Nom"]).strip()
-    grade = str(row["Grade"]).strip()
     annee = row["Nomination_année"]
 
     if pd.notna(annee):
-        return f"{prenom} {nom}, {grade} ({int(annee)})"
+        return f"{prenom} {nom} ({int(annee)})"
 
-    return f"{prenom} {nom}, {grade}"
+    return f"{prenom} {nom}"
 
 
 def popup_html(univ: str, data: pd.DataFrame) -> str:
