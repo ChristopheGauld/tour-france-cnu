@@ -9,7 +9,7 @@ from streamlit_folium import st_folium
 
 st.set_page_config(page_title="Tour de France CNU", page_icon="🗺️", layout="wide")
 
-DATA_PATH = Path("data/Tour090626.xlsx")
+DATA_PATH = Path("Tour090626.xlsx")
 PHOTOS_DIR = Path("photos")
 
 UNIVERSITES = {
