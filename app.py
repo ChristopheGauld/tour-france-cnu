@@ -144,20 +144,16 @@ def practitioner_line(row: pd.Series, with_year: bool = True) -> str:
 
 
 def popup_html(univ: str, data: pd.DataFrame) -> str:
-    lines = [
+    lignes = "<br>".join(
         practitioner_line(row, with_year=True)
         for _, row in data.sort_values(["Nom", "Prénom"]).iterrows()
-    ]
-
-    items = "".join(f"<li>{line}</li>" for line in lines)
+    )
 
     return f"""
     <div style="font-family: Arial; font-size: 14px; width: 360px;">
         <h4 style="margin:0 0 8px 0;">{univ}</h4>
         <p style="margin:0 0 8px 0;"><b>{len(data)}</b> praticien(s)</p>
-        <ul style="padding-left:18px; margin:0;">
-            {items}
-        </ul>
+        <p style="margin:0;">{lignes}</p>
     </div>
     """
 
@@ -226,15 +222,8 @@ st.markdown(
     }
 
     .selected-box h3,
-    .selected-box h4,
-    .selected-box p,
-    .selected-box ul,
-    .selected-box li {
+    .selected-box p {
         color: white;
-    }
-
-    .selected-box li {
-        margin-bottom: 6px;
     }
     </style>
     """,
@@ -400,40 +389,30 @@ else:
 
     repartition = praticiens["Corps"].value_counts()
 
-    corps_html = ""
-    for corps, n in repartition.items():
-        corps_html += f"<li>{corps} : {n}</li>"
-
-    lines = [
-        practitioner_line(row, with_year=True)
-        for _, row in praticiens.iterrows()
-    ]
-
-    liste_html = "".join(f"<li>{line}</li>" for line in lines)
-
     texte_repartition = "<br>".join(
-    [f"{corps} : {n}" for corps, n in repartition.items()]
-)
+        [f"{corps} : {n}" for corps, n in repartition.items()]
+    )
 
-texte_praticiens = "<br>".join(
-    [practitioner_line(row, with_year=True) for _, row in praticiens.iterrows()]
-)
+    texte_praticiens = "<br>".join(
+        [practitioner_line(row, with_year=True) for _, row in praticiens.iterrows()]
+    )
 
-st.markdown(
-    f"""
-    <div class="selected-box">
-        <h3 style="margin-top:0;">{universite_selectionnee}</h3>
-        <p><b>{len(praticiens)}</b> praticien(s)</p>
+    st.markdown(
+        f"""
+        <div class="selected-box">
+            <h3 style="margin-top:0;">{universite_selectionnee}</h3>
+            <p><b>{len(praticiens)}</b> praticien(s)</p>
 
-        <p><b>Répartition par corps</b><br>
-        {texte_repartition}</p>
+            <p><b>Répartition par corps</b><br>
+            {texte_repartition}</p>
 
-        <p><b>Liste des praticiens</b><br>
-        {texte_praticiens}</p>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+            <p><b>Liste des praticiens</b><br>
+            {texte_praticiens}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 for _, row in praticiens.iterrows():
     prenom = str(row["Prénom"]).strip()
