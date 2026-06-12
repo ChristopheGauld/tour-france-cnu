@@ -1,6 +1,7 @@
 # Tour de France CNU
 
-Application Streamlit pour afficher les universités et les candidats sur une carte de France.
+L'application pour afficher les universités et les candidats sur la carte de France est disponible sur : https://tour-france-cnu-rcs7zanlfmax3jymteuhos.streamlit.app/
+
 
 ## Déploiement Streamlit Cloud
 
@@ -24,6 +25,9 @@ Nom recommandé :
 
 Exemple :
 
-`Christophe_Gauld.jpg`
+`Blaise_Pascal.jpg`
 
 Les accents et espaces sont gérés partiellement, mais il est préférable d’utiliser ce format simple.
+
+
+Disponible sur : https://tour-france-cnu-rcs7zanlfmax3jymteuhos.streamlit.app/
