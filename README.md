@@ -1,6 +1,8 @@
 # Tour de France CNU
 
-L'application pour afficher les universités et les candidats sur la carte de France est disponible sur : https://tour-france-cnu-rcs7zanlfmax3jymteuhos.streamlit.app/
+L'application pour afficher les universités et les candidats sur la carte de France est disponible sur : https://tinyurl.com/TourDeFrancePEA
+
+(Ou par le lien complet : https://tour-france-cnu-rcs7zanlfmax3jymteuhos.streamlit.app/)
 
 
 ## Déploiement Streamlit Cloud
@@ -30,4 +32,6 @@ Exemple :
 Les accents et espaces sont gérés partiellement, mais il est préférable d’utiliser ce format simple.
 
 
-Disponible sur : https://tour-france-cnu-rcs7zanlfmax3jymteuhos.streamlit.app/
+Disponible sur : https://tinyurl.com/TourDeFrancePEA
+
+(Ou : https://tour-france-cnu-rcs7zanlfmax3jymteuhos.streamlit.app/)
