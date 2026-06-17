@@ -14,7 +14,7 @@ st.set_page_config(
     layout="wide",
 )
 
-EXCEL_PATH = Path("Tour090626.xlsx")
+GOOGLE_SHEET_CSV = "https://docs.google.com/spreadsheets/d/17u0RMvtud4-uERfHmyb5N_FGqZSLlIQloUTxPtUg2e0/export?format=csv&gid=0"
 PHOTO_DIRS = [Path("photo"), Path("photos")]
 
 
@@ -99,24 +99,27 @@ def find_photo(prenom: str, nom: str) -> Path | None:
 
 @st.cache_data
 def load_data() -> pd.DataFrame:
-    if not EXCEL_PATH.exists():
-        st.error(f"Le fichier {EXCEL_PATH} est introuvable.")
-        st.stop()
 
-    df = pd.read_excel(EXCEL_PATH)
+    df = pd.read_csv(GOOGLE_SHEET_CSV)
 
     required_columns = ["Université", "Nom", "Prénom", "Corps", "Nomination"]
     missing = [col for col in required_columns if col not in df.columns]
 
     if missing:
-        st.error("Colonnes manquantes dans le fichier Excel : " + ", ".join(missing))
+        st.error(
+            "Colonnes manquantes dans le Google Sheet : "
+            + ", ".join(missing)
+        )
         st.stop()
 
     df["Université"] = df["Université"].apply(normalize_university)
     df["Nom"] = df["Nom"].astype(str).str.strip()
     df["Prénom"] = df["Prénom"].astype(str).str.strip()
     df["Corps"] = df["Corps"].astype(str).str.strip()
-    df["Nomination_année"] = pd.to_numeric(df["Nomination"], errors="coerce").astype("Int64")
+    df["Nomination_année"] = pd.to_numeric(
+        df["Nomination"],
+        errors="coerce"
+    ).astype("Int64")
 
     return df
 
