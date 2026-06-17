@@ -2,9 +2,6 @@
 
 L'application pour afficher les universités et les candidats sur la carte de France est disponible sur : https://tinyurl.com/TourDeFrancePEA
 
-(Ou par le lien complet : https://tour-france-cnu-rcs7zanlfmax3jymteuhos.streamlit.app/)
-
-
 ## Photos
 
 Vous pouvez ajouter votre photo dans le dossier `photos/`.
@@ -24,4 +21,4 @@ Exemple :
 
 Disponible sur : https://tinyurl.com/TourDeFrancePEA
 
-(Ou : https://tour-france-cnu-rcs7zanlfmax3jymteuhos.streamlit.app/)
+(Ou par le lien complet : https://tour-france-cnu-rcs7zanlfmax3jymteuhos.streamlit.app/)
