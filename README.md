@@ -5,31 +5,21 @@ L'application pour afficher les universités et les candidats sur la carte de Fr
 (Ou par le lien complet : https://tour-france-cnu-rcs7zanlfmax3jymteuhos.streamlit.app/)
 
 
-## Déploiement Streamlit Cloud
-
-1. Créer un dépôt GitHub privé.
-2. Déposer tous les fichiers de ce dossier dans le dépôt.
-3. Aller sur Streamlit Community Cloud.
-4. Créer une nouvelle app avec `app.py` comme fichier principal.
-5. Déployer.
-
-## Mise à jour des données
-
-Remplacer simplement `data/Tour090626.xlsx` par la dernière version du fichier, puis faire un commit sur GitHub.
-
 ## Photos
 
-Ajouter les photos dans le dossier `photos/`.
+Vous pouvez ajouter votre photo dans le dossier `photos/`.
 
-Nom recommandé :
+Attention, il faut bien mettre le nom de la photo sous cette forme sinon vous ne serez pas reconnu :
 
 `Prenom_Nom.jpg`
+`Prenom-Composé_Nom.jpg`
 
 Exemple :
 
 `Blaise_Pascal.jpg`
+`Blaise-Robert_Pascal.jpg`
 
-Les accents et espaces sont gérés partiellement, mais il est préférable d’utiliser ce format simple.
+(Les accents et espaces sont gérés partiellement, mais il est préférable d’utiliser ce format simple)
 
 
 Disponible sur : https://tinyurl.com/TourDeFrancePEA
