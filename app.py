@@ -246,7 +246,6 @@ st.markdown(
 
 
 df_original = load_data()
-st.write("Google Sheet chargé")
 df = df_original.copy()
 
 
