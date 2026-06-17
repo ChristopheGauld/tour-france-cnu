@@ -306,7 +306,6 @@ st.markdown(
         <b>{nb_puph}</b> PU-PH ·
         <b>{nb_pat_pa}</b> PAT/PA ·
         <b>{nb_phu}</b> PHU ·
-        <b>{nb_photos}</b> photos disponibles
     </div>
     """,
     unsafe_allow_html=True,
