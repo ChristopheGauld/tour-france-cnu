@@ -1,3 +1,5 @@
+ATTENTION : L'APP EST DÉSORMAIS PUBLIQUE MAIS LES INFORMATIONS INDIVIDUELLES NE SONT PAS TOUTES À JOUR - NOUS FERONS LA MISE À JOUR PROCHAINEMENT
+
 # Tour de France CNU
 
 L'application pour afficher les universités et les candidats sur la carte de France est disponible sur : https://tinyurl.com/TourDeFrancePEA
