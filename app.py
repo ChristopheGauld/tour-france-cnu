@@ -315,7 +315,7 @@ st.markdown(
 m = folium.Map(
     location=[46.6, 2.3],
     zoom_start=6,
-    tiles="CartoDB positron",
+    tiles="OpenStreetMap",
 )
 
 for univ in sorted(df["Université"].dropna().unique()):
