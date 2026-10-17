@@ -1,4 +1,5 @@
 from pathlib import Path
+import base64
 import re
 import unicodedata
 
@@ -16,6 +17,10 @@ st.set_page_config(
 
 GOOGLE_SHEET_CSV = "https://docs.google.com/spreadsheets/d/17u0RMvtud4-uERfHmyb5N_FGqZSLlIQloUTxPtUg2e0/export?format=csv&gid=0"
 PHOTO_DIRS = [Path("photo"), Path("photos")]
+CNU_PEA_URL = "https://conseil-national-des-universites.fr/cnu/#/entite/entiteName/CNU-SANTE/idChild/37/idNode/2812-2864"
+GUIDE_URL = CNU_PEA_URL
+LOGO_PATH = Path(__file__).resolve().parent / "assets" / "cnu.png"
+CORPS_ORDER = ("PU-PH", "MCU-PH", "PHU", "PA", "MCA", "PA-T", "MCA-T")
 
 
 UNIVERSITES = {
@@ -112,6 +117,9 @@ def load_data() -> pd.DataFrame:
         )
         st.stop()
 
+    # Some university rows are placeholders without a practitioner.
+    df = df[df["Nom"].fillna("").astype(str).str.strip().ne("")].copy()
+
     df["Université"] = df["Université"].apply(normalize_university)
     df["Nom"] = df["Nom"].astype(str).str.strip()
     df["Prénom"] = df["Prénom"].astype(str).str.strip()
@@ -124,14 +132,23 @@ def load_data() -> pd.DataFrame:
     return df
 
 
-def count_corps(df: pd.DataFrame, pattern: str) -> int:
-    return int(
-        df["Corps"]
-        .astype(str)
-        .str.upper()
-        .str.contains(pattern, regex=True, na=False)
-        .sum()
-    )
+def normalize_corps(value: object) -> str:
+    """Match whole status labels, keeping PA/MCA separate from PA-T/MCA-T."""
+    label = str(value).strip().upper()
+    key = re.sub(r"[\s\-‐‑‒–—−]", "", label)
+    aliases = {re.sub("-", "", corps): corps for corps in CORPS_ORDER}
+    aliases["MCU"] = "MCU-PH"
+    return aliases.get(key, label)
+
+
+def corps_sort_key(value: object) -> tuple[int, str]:
+    label = normalize_corps(value)
+    rank = CORPS_ORDER.index(label) if label in CORPS_ORDER else len(CORPS_ORDER)
+    return rank, str(value)
+
+
+def count_corps(df: pd.DataFrame, corps: str) -> int:
+    return int(df["Corps"].map(normalize_corps).eq(corps).sum())
 
 
 def practitioner_line(row: pd.Series, with_year: bool = True) -> str:
@@ -186,16 +203,89 @@ def photo_placeholder():
 st.markdown(
     """
     <style>
-    .main-title {
-        font-size: 46px;
-        font-weight: 800;
-        margin-bottom: 0px;
+    .cnu-header {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        padding: 28px;
+        margin-bottom: 24px;
+        border: 1px solid #e6d9c9;
+        border-top: 4px solid #a64028;
+        border-radius: 20px;
+        background: linear-gradient(120deg, #ffffff, #faf5ed);
+        box-shadow: 0 6px 24px rgba(50, 30, 15, 0.06);
     }
 
-    .subtitle {
-        color: #6b7280;
-        font-size: 21px;
-        margin-bottom: 22px;
+    .cnu-logo-frame {
+        flex: 0 0 180px;
+        padding: 18px 12px;
+        border: 1px solid #ece5db;
+        border-radius: 14px;
+        background: #ffffff;
+    }
+
+    .cnu-logo-frame img {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+
+    .cnu-header .eyebrow {
+        color: #984029;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        margin: 0 0 8px;
+    }
+
+    .cnu-header h1 {
+        color: #25372e;
+        font-size: clamp(28px, 3vw, 40px);
+        font-weight: 800;
+        line-height: 1.15;
+        padding: 0;
+        margin: 0 0 12px;
+    }
+
+    .cnu-header .subtitle {
+        color: #60665f;
+        font-size: 17px;
+        margin: 0 0 18px;
+    }
+
+    .cnu-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .cnu-links a {
+        display: inline-flex;
+        align-items: center;
+        gap: 16px;
+        padding: 8px 15px;
+        border: 1px solid #a64028;
+        border-radius: 8px;
+        color: #91361f;
+        background: #ffffff;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .cnu-links a:first-child {
+        color: #ffffff;
+        background: #983a25;
+    }
+
+    .cnu-links a:hover {
+        box-shadow: 0 3px 10px rgba(110, 40, 20, 0.18);
+        text-decoration: underline;
+    }
+
+    .cnu-links a:focus-visible {
+        outline: 3px solid #2563eb;
+        outline-offset: 3px;
     }
 
     .stats-bar {
@@ -203,10 +293,59 @@ st.markdown(
         color: white;
         padding: 18px 22px;
         border-radius: 18px;
-        font-size: 18px;
         margin-bottom: 20px;
-        line-height: 1.8;
         box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    }
+
+    .stats-summary {
+        font-size: 15px;
+        padding-bottom: 12px;
+        margin-bottom: 14px;
+        border-bottom: 1px solid rgba(255,255,255,0.3);
+    }
+
+    .stats-corps {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 14px 8px;
+    }
+
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .stat-item b {
+        font-size: 25px;
+        line-height: 1.2;
+    }
+
+    .webmasters {
+        border-top: 1px solid #88888844;
+        margin-top: 36px;
+        padding-top: 16px;
+        font-size: 12px;
+        line-height: 1.8;
+        opacity: 0.8;
+        overflow-wrap: anywhere;
+    }
+
+    .webmasters a {
+        color: inherit;
+        text-underline-offset: 3px;
+    }
+
+    @media (max-width: 760px) {
+        .cnu-header { flex-direction: column; align-items: flex-start; padding: 22px; gap: 20px; }
+        .cnu-logo-frame { flex: none; width: 170px; }
+        .stats-corps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 400px) {
+        .stats-corps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
 
     .selected-box {
@@ -234,13 +373,25 @@ st.markdown(
 )
 
 
+logo_base64 = base64.b64encode(LOGO_PATH.read_bytes()).decode("ascii")
 st.markdown(
-    '<div class="main-title">Tour de France des HU de PEA</div>',
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    '<div class="subtitle">Carte interactive des universités et des praticiens</div>',
+    f"""
+    <header class="cnu-header">
+        <div class="cnu-logo-frame">
+            <img src="data:image/png;base64,{logo_base64}"
+                 alt="CNU — Conseil national des universités" width="278" height="132">
+        </div>
+        <div>
+            <p class="eyebrow">CNU SANTÉ · PÉDOPSYCHIATRIE</p>
+            <h1>Tour de France des HU de PEA</h1>
+            <p class="subtitle">Carte interactive des universités et des praticiens</p>
+            <nav class="cnu-links" aria-label="Liens utiles du CNU">
+                <a href="{CNU_PEA_URL}" target="_blank" rel="noopener noreferrer">CNU PEA <span aria-hidden="true">↗</span></a>
+                <a href="{GUIDE_URL}" target="_blank" rel="noopener noreferrer">Guide <span aria-hidden="true">↗</span></a>
+            </nav>
+        </div>
+    </header>
+    """,
     unsafe_allow_html=True,
 )
 
@@ -253,7 +404,7 @@ st.sidebar.header("Filtres")
 
 recherche = st.sidebar.text_input("Rechercher un praticien")
 
-corps_options = sorted(df["Corps"].dropna().unique())
+corps_options = sorted(df["Corps"].dropna().unique(), key=corps_sort_key)
 corps_selection = st.sidebar.multiselect(
     "Corps",
     options=corps_options,
@@ -286,10 +437,7 @@ if recherche:
 total = len(df)
 nb_univ = df["Université"].nunique()
 
-nb_mcuph = count_corps(df, r"MCU")
-nb_puph = count_corps(df, r"PU-PH|PUPH")
-nb_pat_pa = count_corps(df, r"\bPAT\b|\bPA\b")
-nb_phu = count_corps(df, r"PHU")
+corps_counts = {corps: count_corps(df, corps) for corps in CORPS_ORDER}
 
 nb_photos = sum(
     find_photo(row["Prénom"], row["Nom"]) is not None
@@ -297,15 +445,15 @@ nb_photos = sum(
 )
 
 
+corps_stats_html = "".join(
+    f'<div class="stat-item"><b>{count}</b><span>{corps}</span></div>'
+    for corps, count in corps_counts.items()
+)
 st.markdown(
     f"""
     <div class="stats-bar">
-        <b>{total}</b> praticiens ·
-        <b>{nb_univ}</b> universités ·
-        <b>{nb_mcuph}</b> MCU-PH ·
-        <b>{nb_puph}</b> PU-PH ·
-        <b>{nb_pat_pa}</b> PAT/PA ·
-        <b>{nb_phu}</b> PHU ·
+        <div class="stats-summary"><b>{total}</b> praticiens · <b>{nb_univ}</b> universités</div>
+        <div class="stats-corps">{corps_stats_html}</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -423,7 +571,11 @@ for _, row in praticiens.iterrows():
 
     with c1:
         if photo:
-            st.image(str(photo), width=150)
+            try:
+                st.image(str(photo), width=150)
+            except OSError:
+                # Keep the directory usable if an uploaded photo cannot be decoded.
+                photo_placeholder()
         else:
             photo_placeholder()
 
@@ -462,3 +614,16 @@ else:
     ).fillna(0)
 
     st.bar_chart(pivot)
+
+
+st.markdown(
+    """
+    <footer class="webmasters">
+        Webmasters : Christophe Gauld
+        (<a href="mailto:christophe.gauld@chu-lyon.fr">christophe.gauld@chu-lyon.fr</a>),
+        Ludovic Gicquel
+        (<a href="mailto:ludovic.gicquel@univ-poitiers.fr">ludovic.gicquel@univ-poitiers.fr</a>)
+    </footer>
+    """,
+    unsafe_allow_html=True,
+)
