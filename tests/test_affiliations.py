@@ -32,7 +32,7 @@ class AffiliationTests(unittest.TestCase):
         aliases = name_index(self.roster + [{"Prénom": "Charlotte", "Nom": "Schröder"}])
         self.assertIsNone(match_person("C. Schroder", aliases)[0])
         self.assertEqual(match_person("Carmen Schröder", aliases)[0], "carmen:schroder")
-        self.assertIsNone(match_person("S. Viaud", aliases)[0])
+        self.assertIsNone(match_person("S. Viault", aliases)[0])
         self.assertIsNone(match_person("C. Schroder-Dupont", aliases)[0])
 
     def test_roles_parentheses_and_unmatched_name_do_not_cross_people(self):
@@ -46,8 +46,10 @@ class AffiliationTests(unittest.TestCase):
         self.assertEqual(entries["gisele:apter"][0].detail, "International Distinguished Fellow")
         self.assertEqual(entries["gisele:apter"][1].detail, "EuropeanSSPD, Section Borderline PD and Parenthood")
         self.assertEqual(entries["diane:purperouakil"][0].detail, "membre du bureau, vice présidente")
-        self.assertEqual([(u.name, u.affiliation) for u in unmatched], [("S. Viaud", "WAIMH")])
-        self.assertNotIn("sylvie:viauxsavelon", entries)
+        self.assertFalse(unmatched)
+        self.assertEqual(entries["sylvie:viauxsavelon"][0].name, "WAIMH")
+        for variant in ("S. Viaud", "S. Viaux", "Sylvie Viaux-Savelon"):
+            self.assertEqual(match_person(variant, name_index(self.roster))[0], "sylvie:viauxsavelon")
 
     def test_labels_scope_and_dates(self):
         rows = [
@@ -76,12 +78,17 @@ class AffiliationTests(unittest.TestCase):
         self.assertFalse(matches_search(text, "CNU"))
         self.assertFalse(matches_search(text, "["))
 
-    def test_source_text_is_escaped_and_empty_state_does_not_claim_no_affiliations(self):
+    def test_source_text_is_escaped_and_empty_cards_are_omitted(self):
         html = affiliations_html([Affiliation("Revue", '<script>alert("x")</script>', "A & B")])
         self.assertNotIn("<script>", html)
         self.assertIn("&lt;script&gt;", html)
         self.assertIn("A &amp; B", html)
-        self.assertIn("Affiliations non renseignées", affiliations_html([]))
+        self.assertEqual(affiliations_html([]), "")
+        html = affiliations_html([Affiliation("Revue.", "example.org.", "Responsable.  ", "Juillet…")])
+        self.assertIn("example.org<", html)
+        self.assertNotIn("Responsable.", html)
+        self.assertNotIn("Revue.", html)
+        self.assertNotIn("Juillet…", html)
 
 
 if __name__ == "__main__":

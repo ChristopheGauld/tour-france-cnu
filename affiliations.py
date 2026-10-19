@@ -21,10 +21,11 @@ def practitioner_key(first_name: str, last_name: str) -> str:
 
 
 # Short family names used in the source, checked against the full roster.
-# Do not add fuzzy matches here: in particular, "S. Viaud" is unconfirmed.
+# Do not add fuzzy matches here; the Viaux/Viaud variants were confirmed by the owner.
 SURNAME_ALIASES = {
     "lauriane:vulliezcoady": ("Vulliez",),
     "angele:manesseconsoli": ("Consoli",),
+    "sylvie:viauxsavelon": ("Viaux", "Viaud"),
 }
 
 CATEGORY_ORDER = {
@@ -191,14 +192,20 @@ def matches_search(text: str, query: str) -> bool:
 
 
 def affiliations_html(entries: list[Affiliation]) -> str:
+    if not entries:
+        return ""
+
+    def display_text(value: str) -> str:
+        return escape("\n".join(line.rstrip(" .…\t") for line in value.strip().splitlines()))
+
     groups = defaultdict(list)
     for entry in entries:
-        detail = f'<span class="affiliation-detail">{escape(entry.detail)}</span>' if entry.detail else ""
-        dates = f'<span class="affiliation-detail">Dates : {escape(entry.dates)}</span>' if entry.dates else ""
-        groups[entry.label].append(f"<li>{escape(entry.name)}{detail}{dates}</li>")
+        detail = f'<span class="affiliation-detail">{display_text(entry.detail)}</span>' if entry.detail else ""
+        dates = f'<span class="affiliation-detail">Dates : {display_text(entry.dates)}</span>' if entry.dates else ""
+        groups[entry.label].append(f"<li>{display_text(entry.name)}{detail}{dates}</li>")
     content = "".join(
-        f'<div class="affiliation-group"><dt>{escape(label)}</dt><dd><ul>{"".join(items)}</ul></dd></div>'
+        f'<div class="affiliation-group"><dt>{display_text(label)}</dt><dd><ul>{"".join(items)}</ul></dd></div>'
         for label, items in groups.items()
     )
-    body = f"<dl>{content}</dl>" if groups else '<p class="affiliation-empty">Affiliations non renseignées.</p>'
+    body = f"<dl>{content}</dl>"
     return f'<aside class="affiliation-card" aria-label="Affiliations et responsabilités"><h4>Affiliations et responsabilités</h4>{body}</aside>'

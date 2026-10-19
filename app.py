@@ -403,7 +403,6 @@ st.markdown(
     .affiliation-card li { font-size: 14px; line-height: 1.5; margin: 0; }
     .affiliation-card li + li { margin-top: 7px; }
     .affiliation-detail { display: block; color: #656b62; font-size: 12px; }
-    .affiliation-empty { color: #656b62; font-size: 14px; margin: 0; }
 
     @media (max-width: 760px) {
         .cnu-header { flex-direction: column; align-items: flex-start; padding: 22px; gap: 20px; }
@@ -468,7 +467,7 @@ affiliations_by_person, unmatched_affiliations = build_affiliations(
     affiliation_rows, df_original.to_dict("records")
 )
 if affiliations_from_backup:
-    st.info("Les affiliations n’ont pas pu être actualisées. La dernière version enregistrée est affichée.")
+    st.info("Les affiliations n’ont pas pu être actualisées — la dernière version enregistrée est affichée")
 df = df_original.copy()
 
 
@@ -476,7 +475,7 @@ st.sidebar.header("Filtres")
 
 recherche = st.sidebar.text_input(
     "Rechercher",
-    placeholder="Un praticien, une affiliation, une responsabilité…",
+    placeholder="Un praticien, une affiliation, une responsabilité",
 )
 
 corps_options = sorted(df["Corps"].dropna().unique(), key=corps_sort_key)
@@ -650,7 +649,9 @@ for _, row in praticiens.iterrows():
 
     photo = find_photo(prenom, nom)
 
-    c1, c2, c3 = st.columns([1, 2, 3])
+    person_affiliations = affiliations_by_person.get(practitioner_key(prenom, nom), [])
+    columns = st.columns([1, 2, 3] if person_affiliations else [1, 5])
+    c1, c2 = columns[:2]
 
     with c1:
         if photo:
@@ -673,11 +674,9 @@ for _, row in praticiens.iterrows():
 
         st.write(f"Université : {row['Université']}")
 
-    with c3:
-        st.markdown(
-            affiliations_html(affiliations_by_person.get(practitioner_key(prenom, nom), [])),
-            unsafe_allow_html=True,
-        )
+    if person_affiliations:
+        with columns[2]:
+            st.markdown(affiliations_html(person_affiliations), unsafe_allow_html=True)
 
     st.divider()
 
@@ -694,7 +693,7 @@ chart_data = (
 )
 
 if chart_data.empty:
-    st.info("Aucune année de nomination disponible.")
+    st.info("Aucune année de nomination disponible")
 else:
     pivot = chart_data.pivot(
         index="Nomination_année",

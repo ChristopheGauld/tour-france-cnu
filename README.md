@@ -39,7 +39,9 @@ Les données Google Sheets sont mises en cache pendant cinq minutes. Lorsqu’un
 
 Les encadrés à côté des noms utilisent l’onglet `Feuil1` (`gid=1088987662`) du [tableau des affiliations](https://docs.google.com/spreadsheets/d/19OcxD0PsBQStTMnQgEMmZ9JeFtStRnGahkItAuyb_kk/edit?gid=1088987662). Les fonctions et dates renseignées sont conservées. Le fichier `data/affiliations.csv` est une copie de secours du tableau au 19 octobre 2026, utilisée si Google Sheets est indisponible.
 
-Le rapprochement dans `affiliations.py` ignore les accents, la casse et la ponctuation des noms et reconnaît les initiales simples ou composées. Deux noms abrégés ont été vérifiés : « L. Vulliez » pour Lauriane Vulliez Coady et « A. Consoli » pour Angèle Manesse-Consoli. Les correspondances ambiguës et les autres différences d’orthographe sont exclues. « S. Viaud » (WAIMH) reste à confirmer et n’est pas attribué à Sylvie Viaux-Savelon.
+Le rapprochement dans `affiliations.py` ignore les accents, la casse et la ponctuation des noms et reconnaît les initiales simples ou composées — Les noms abrégés « L. Vulliez » et « A. Consoli » correspondent à Lauriane Vulliez Coady et Angèle Manesse-Consoli — Les variantes « S. Viaud » et « S. Viaux » ont été confirmées par le propriétaire du site pour Sylvie Viaux-Savelon, à laquelle l’affiliation WAIMH est attribuée — Les autres correspondances ambiguës sont exclues
+
+Aucun encadré n’est affiché pour les praticiens sans affiliation renseignée — Les points finaux sont retirés à l’affichage des affiliations, sans modifier le tableau source
 
 Le champ « Rechercher » couvre les noms, universités, corps, années de nomination, affiliations et responsabilités, sans distinction de casse ou d’accents. Plusieurs mots peuvent être combinés. Les filtres s’appliquent à la liste, aux effectifs et à la carte.
 
