@@ -31,4 +31,6 @@ Les données proviennent de l’onglet `gid=0` du [tableau Google Sheets](https:
 Le bandeau affiche les corps dans l’ordre PU-PH, MCU-PH, PHU, PA, MCA, PA-T, MCA-T ; les catégories temporaires sont comptées séparément.
 
 Le logo `assets/cnu.png` provient du [site officiel du CNU](https://conseil-national-des-universites.fr/cnu/assets/images/cnu.png) et est conservé dans le dépôt pour garantir son affichage.
-Les liens « CNU PEA » et « Guide » renvoient actuellement à la même page, conformément aux adresses fournies. Le lien du guide peut être modifié via `GUIDE_URL` dans `app.py`.
+Le bouton rouge « CNU PEA » renvoie à la page officielle de la sous-section. Le pied de page présente les contacts.
+
+Les données Google Sheets sont mises en cache pendant cinq minutes. Lorsqu’un filtre ne conserve qu’une université, la carte se centre sur celle-ci, y compris à La Réunion.

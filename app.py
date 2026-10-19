@@ -18,7 +18,6 @@ st.set_page_config(
 GOOGLE_SHEET_CSV = "https://docs.google.com/spreadsheets/d/17u0RMvtud4-uERfHmyb5N_FGqZSLlIQloUTxPtUg2e0/export?format=csv&gid=0"
 PHOTO_DIRS = [Path("photo"), Path("photos")]
 CNU_PEA_URL = "https://conseil-national-des-universites.fr/cnu/#/entite/entiteName/CNU-SANTE/idChild/37/idNode/2812-2864"
-GUIDE_URL = CNU_PEA_URL
 LOGO_PATH = Path(__file__).resolve().parent / "assets" / "cnu.png"
 CORPS_ORDER = ("PU-PH", "MCU-PH", "PHU", "PA", "MCA", "PA-T", "MCA-T")
 
@@ -102,7 +101,7 @@ def find_photo(prenom: str, nom: str) -> Path | None:
     return None
 
 
-@st.cache_data
+@st.cache_data(ttl=300)
 def load_data() -> pd.DataFrame:
 
     df = pd.read_csv(GOOGLE_SHEET_CSV)
@@ -264,18 +263,13 @@ st.markdown(
         align-items: center;
         gap: 16px;
         padding: 8px 15px;
-        border: 1px solid #a64028;
+        border: 1px solid #b91c1c;
         border-radius: 8px;
-        color: #91361f;
-        background: #ffffff;
+        color: #ffffff;
+        background: #b91c1c;
         font-size: 14px;
         font-weight: 600;
         text-decoration: none;
-    }
-
-    .cnu-links a:first-child {
-        color: #ffffff;
-        background: #983a25;
     }
 
     .cnu-links a:hover {
@@ -323,7 +317,7 @@ st.markdown(
         line-height: 1.2;
     }
 
-    .webmasters {
+    .contacts {
         border-top: 1px solid #88888844;
         margin-top: 36px;
         padding-top: 16px;
@@ -333,7 +327,7 @@ st.markdown(
         overflow-wrap: anywhere;
     }
 
-    .webmasters a {
+    .contacts a {
         color: inherit;
         text-underline-offset: 3px;
     }
@@ -382,12 +376,11 @@ st.markdown(
                  alt="CNU — Conseil national des universités" width="278" height="132">
         </div>
         <div>
-            <p class="eyebrow">CNU SANTÉ · PÉDOPSYCHIATRIE</p>
+            <p class="eyebrow">PSYCHIATRIE DE L'ENFANT ET DE L'ADOLESCENT</p>
             <h1>Tour de France des HU de PEA</h1>
             <p class="subtitle">Carte interactive des universités et des praticiens</p>
             <nav class="cnu-links" aria-label="Liens utiles du CNU">
                 <a href="{CNU_PEA_URL}" target="_blank" rel="noopener noreferrer">CNU PEA <span aria-hidden="true">↗</span></a>
-                <a href="{GUIDE_URL}" target="_blank" rel="noopener noreferrer">Guide <span aria-hidden="true">↗</span></a>
             </nav>
         </div>
     </header>
@@ -460,9 +453,13 @@ st.markdown(
 )
 
 
+visible_universities = sorted(df["Université"].dropna().unique())
+focused_university = visible_universities[0] if len(visible_universities) == 1 else None
+map_center = UNIVERSITES.get(focused_university, [46.6, 2.3])
+
 m = folium.Map(
-    location=[46.6, 2.3],
-    zoom_start=6,
+    location=map_center,
+    zoom_start=7 if focused_university in UNIVERSITES else 6,
     tiles="OpenStreetMap",
 )
 
@@ -512,6 +509,7 @@ map_data = st_folium(
     m,
     width=None,
     height=650,
+    key=f"university-map-{focused_university or 'all'}",
     returned_objects=["last_object_clicked_tooltip"],
 )
 
@@ -618,8 +616,8 @@ else:
 
 st.markdown(
     """
-    <footer class="webmasters">
-        Webmasters : Christophe Gauld
+    <footer class="contacts">
+        Contacts : Christophe Gauld
         (<a href="mailto:christophe.gauld@chu-lyon.fr">christophe.gauld@chu-lyon.fr</a>),
         Ludovic Gicquel
         (<a href="mailto:ludovic.gicquel@univ-poitiers.fr">ludovic.gicquel@univ-poitiers.fr</a>)
