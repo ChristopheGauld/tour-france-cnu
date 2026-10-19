@@ -9,6 +9,7 @@ from urllib.request import urlopen
 import folium
 import pandas as pd
 import streamlit as st
+from branca.colormap import LinearColormap
 from streamlit_folium import st_folium
 
 from affiliations import (
@@ -540,6 +541,12 @@ st.markdown(
 visible_universities = sorted(df["Université"].dropna().unique())
 focused_university = visible_universities[0] if len(visible_universities) == 1 else None
 map_center = UNIVERSITES.get(focused_university, [46.6, 2.3])
+max_university_count = max(1, int(df_original.groupby("Université").size().max())) if not df_original.empty else 1
+university_colors = LinearColormap(
+    ["#ef4444", "#facc15", "#22c55e"],
+    vmin=0,
+    vmax=max_university_count,
+)
 
 m = folium.Map(
     location=map_center,
@@ -555,12 +562,7 @@ for univ in sorted(df["Université"].dropna().unique()):
     lat, lon = UNIVERSITES[univ]
     n = len(data_univ)
 
-    if n <= 2:
-        fill_color = "#facc15"
-    elif n <= 5:
-        fill_color = "#f97316"
-    else:
-        fill_color = "#dc2626"
+    fill_color = university_colors(n)
 
     folium.Marker(
         location=[lat, lon],
@@ -570,8 +572,8 @@ for univ in sorted(df["Université"].dropna().unique()):
             html=f"""
             <div style="
                 background:{fill_color};
-                color:white;
-                border:3px solid #7f1d1d;
+                color:#111827;
+                border:3px solid #334155;
                 border-radius:50%;
                 width:44px;
                 height:44px;
