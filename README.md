@@ -34,3 +34,13 @@ Le logo `assets/cnu.png` provient du [site officiel du CNU](https://conseil-nati
 Le bouton rouge « CNU PEA » renvoie à la page officielle de la sous-section. Le pied de page présente les contacts.
 
 Les données Google Sheets sont mises en cache pendant cinq minutes. Lorsqu’un filtre ne conserve qu’une université, la carte se centre sur celle-ci, y compris à La Réunion.
+
+## Affiliations et recherche
+
+Les encadrés à côté des noms utilisent l’onglet `Feuil1` (`gid=1088987662`) du [tableau des affiliations](https://docs.google.com/spreadsheets/d/19OcxD0PsBQStTMnQgEMmZ9JeFtStRnGahkItAuyb_kk/edit?gid=1088987662). Les fonctions et dates renseignées sont conservées. Le fichier `data/affiliations.csv` est une copie de secours du tableau au 19 octobre 2026, utilisée si Google Sheets est indisponible.
+
+Le rapprochement dans `affiliations.py` ignore les accents, la casse et la ponctuation des noms et reconnaît les initiales simples ou composées. Deux noms abrégés ont été vérifiés : « L. Vulliez » pour Lauriane Vulliez Coady et « A. Consoli » pour Angèle Manesse-Consoli. Les correspondances ambiguës et les autres différences d’orthographe sont exclues. « S. Viaud » (WAIMH) reste à confirmer et n’est pas attribué à Sylvie Viaux-Savelon.
+
+Le champ « Rechercher » couvre les noms, universités, corps, années de nomination, affiliations et responsabilités, sans distinction de casse ou d’accents. Plusieurs mots peuvent être combinés. Les filtres s’appliquent à la liste, aux effectifs et à la carte.
+
+Validation du rapprochement, des libellés et de la recherche : `python -m unittest discover -s tests`.

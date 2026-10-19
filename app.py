@@ -1,12 +1,23 @@
 from pathlib import Path
 import base64
+import csv
+import io
 import re
 import unicodedata
+from urllib.request import urlopen
 
 import folium
 import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
+
+from affiliations import (
+    affiliations_html,
+    build_affiliations,
+    matches_search,
+    practitioner_key,
+    search_text,
+)
 
 
 st.set_page_config(
@@ -16,6 +27,8 @@ st.set_page_config(
 )
 
 GOOGLE_SHEET_CSV = "https://docs.google.com/spreadsheets/d/17u0RMvtud4-uERfHmyb5N_FGqZSLlIQloUTxPtUg2e0/export?format=csv&gid=0"
+AFFILIATIONS_CSV = "https://docs.google.com/spreadsheets/d/19OcxD0PsBQStTMnQgEMmZ9JeFtStRnGahkItAuyb_kk/export?format=csv&gid=1088987662"
+AFFILIATIONS_BACKUP = Path(__file__).resolve().parent / "data" / "affiliations.csv"
 PHOTO_DIRS = [Path("photo"), Path("photos")]
 CNU_PEA_URL = "https://conseil-national-des-universites.fr/cnu/#/entite/entiteName/CNU-SANTE/idChild/37/idNode/2812-2864"
 LOGO_PATH = Path(__file__).resolve().parent / "assets" / "cnu.png"
@@ -131,6 +144,19 @@ def load_data() -> pd.DataFrame:
     return df
 
 
+@st.cache_data(ttl=300)
+def load_affiliation_rows() -> tuple[list[list[str]], bool]:
+    try:
+        with urlopen(AFFILIATIONS_CSV, timeout=10) as response:
+            rows = list(csv.reader(io.StringIO(response.read().decode("utf-8-sig"))))
+        if not any(len(row) >= 4 and row[2].strip() == "NOMS" for row in rows):
+            raise ValueError("Unrecognized affiliation table")
+        return rows, False
+    except (OSError, ValueError, csv.Error):
+        with AFFILIATIONS_BACKUP.open(encoding="utf-8-sig", newline="") as backup:
+            return list(csv.reader(backup)), True
+
+
 def normalize_corps(value: object) -> str:
     """Match whole status labels, keeping PA/MCA separate from PA-T/MCA-T."""
     label = str(value).strip().upper()
@@ -182,7 +208,8 @@ def photo_placeholder():
         """
         <div style="
             width:150px;
-            height:150px;
+            max-width:100%;
+            aspect-ratio:1;
             border:2px solid #b23a22;
             border-radius:14px;
             display:flex;
@@ -332,6 +359,52 @@ st.markdown(
         text-underline-offset: 3px;
     }
 
+    .affiliation-card {
+        border: 1px solid #dfd5c8;
+        border-left: 3px solid #b23a22;
+        border-radius: 16px;
+        background: #faf7f2;
+        color: #29392f;
+        padding: 18px 20px;
+        overflow-wrap: anywhere;
+    }
+
+    .affiliation-card h4 {
+        color: #29392f;
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.4;
+        padding: 0;
+        margin: 0 0 14px;
+    }
+
+    .affiliation-card dl,
+    .affiliation-card dd,
+    .affiliation-card ul {
+        margin: 0;
+        padding: 0;
+    }
+
+    .affiliation-group + .affiliation-group {
+        border-top: 1px solid #e6ddd1;
+        margin-top: 12px;
+        padding-top: 12px;
+    }
+
+    .affiliation-card dt {
+        color: #91361f;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.5;
+        margin-bottom: 4px;
+    }
+
+    .affiliation-card ul { list-style: none; }
+    .affiliation-card li { font-size: 14px; line-height: 1.5; margin: 0; }
+    .affiliation-card li + li { margin-top: 7px; }
+    .affiliation-detail { display: block; color: #656b62; font-size: 12px; }
+    .affiliation-empty { color: #656b62; font-size: 14px; margin: 0; }
+
     @media (max-width: 760px) {
         .cnu-header { flex-direction: column; align-items: flex-start; padding: 22px; gap: 20px; }
         .cnu-logo-frame { flex: none; width: 170px; }
@@ -390,12 +463,21 @@ st.markdown(
 
 
 df_original = load_data()
+affiliation_rows, affiliations_from_backup = load_affiliation_rows()
+affiliations_by_person, unmatched_affiliations = build_affiliations(
+    affiliation_rows, df_original.to_dict("records")
+)
+if affiliations_from_backup:
+    st.info("Les affiliations n’ont pas pu être actualisées. La dernière version enregistrée est affichée.")
 df = df_original.copy()
 
 
 st.sidebar.header("Filtres")
 
-recherche = st.sidebar.text_input("Rechercher un praticien")
+recherche = st.sidebar.text_input(
+    "Rechercher",
+    placeholder="Un praticien, une affiliation, une responsabilité…",
+)
 
 corps_options = sorted(df["Corps"].dropna().unique(), key=corps_sort_key)
 corps_selection = st.sidebar.multiselect(
@@ -417,14 +499,17 @@ if universite_filtre != "Toutes les universités":
     df = df[df["Université"] == universite_filtre]
 
 if recherche:
-    mask = (
-        df["Nom"].str.contains(recherche, case=False, na=False)
-        | df["Prénom"].str.contains(recherche, case=False, na=False)
-        | df["Université"].str.contains(recherche, case=False, na=False)
-        | df["Corps"].str.contains(recherche, case=False, na=False)
-        | df["Nomination_année"].astype(str).str.contains(recherche, case=False, na=False)
-    )
-    df = df[mask]
+    mask = [
+        matches_search(
+            search_text(
+                row,
+                affiliations_by_person.get(practitioner_key(row["Prénom"], row["Nom"]), []),
+            ),
+            recherche,
+        )
+        for _, row in df.iterrows()
+    ]
+    df = df.loc[mask]
 
 
 total = len(df)
@@ -565,7 +650,7 @@ for _, row in praticiens.iterrows():
 
     photo = find_photo(prenom, nom)
 
-    c1, c2 = st.columns([1, 4])
+    c1, c2, c3 = st.columns([1, 2, 3])
 
     with c1:
         if photo:
@@ -587,6 +672,12 @@ for _, row in praticiens.iterrows():
             st.write("Année de nomination :")
 
         st.write(f"Université : {row['Université']}")
+
+    with c3:
+        st.markdown(
+            affiliations_html(affiliations_by_person.get(practitioner_key(prenom, nom), [])),
+            unsafe_allow_html=True,
+        )
 
     st.divider()
 
