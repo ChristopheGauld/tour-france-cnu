@@ -41,6 +41,7 @@ UNIVERSITES = {
     "Sorbonne Université": (48.8462, 2.3449),
     "Sorbonne Paris Nord": (48.9060, 2.4500),
     "Paris Saclay": (48.6980, 2.1870),
+    "UVSQ": (48.78379, 2.03924),
     "UPEC": (48.7904, 2.4556),
     "Besançon": (47.2378, 6.0241),
     "Dijon": (47.3220, 5.0415),
